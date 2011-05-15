@@ -1,0 +1,186 @@
+#!/usr/bin/env ruby
+
+# from https://gist.github.com/593551
+
+vim_command = '/usr/bin/vim'
+git_command = 'git'
+hg_command = 'hg'
+
+# Git Plugins
+# Each plugin can be configured thusly:
+#
+# URL: The plugin location. This supports three types:
+#  - git       : a git plugin. Mostly on github.com?
+#                Example: ["git://github.com/sjl/gundo.vim.git"],
+#                ---
+#                This requires the 'git' command to be on your machine. It just
+#                does a git clone.
+#  - mercurial : an hg plugin. Probably bitbucket.org? Requires an hg client in your path.
+#                Example: ["hg://bitbucket.org/ns9tks/vim-fuzzyfinder"],
+#  - vim       : a vim.org hosted plugin. DEPRECATED (use the github repository instead! (ie, ["git://github.com/vim-scripts/SCRIPTNAME.vim"])
+#                Example: ["vim://align-294",        "10110"],
+#                ---
+#                The first string is the name of the plugin.
+#                The second string corresponds to the # (URL?src_id) you see 
+#                for the specific version you wanna download. For instance:
+#
+#                For the script: http://www.vim.org/scripts/script.php?script_id=30
+#                The latest version is 1.13, and the src_id of the link is
+#                http://www.vim.org/scripts/download_script.php?src_id=9196
+#                so 9196 is what I'd put here.
+#
+#   lambda (optional): you can supply a lambda function at the end of any array
+#   to do any post cleanup/install action.. The directory you are currently in
+#   is the bundle/<name> (that you provided here). Example:
+#
+#	  ["git://github.com/vim-scripts/applescript.vim", lambda { }],
+
+bundles = [ 
+  	["git://github.com/msanders/snipmate.vim.git"],
+	#["git://github.com/astashov/vim-ruby-debugger.git"],
+	["git://github.com/scrooloose/nerdtree.git"],
+	["git://github.com/vim-scripts/tComment.git"],
+	["git://github.com/vim-scripts/mru.vim.git"],
+	["git://github.com/vim-scripts/FuzzyFinder.git"],
+	["hg://bitbucket.org/ns9tks/vim-l9"],
+	["git://github.com/tomtom/tlib_vim.git"],
+  #["git://github.com/Shougo/neocomplcache.git"],
+	["git://github.com/vim-scripts/taglist.vim"],
+	#["git://github.com/vim-scripts/AutoComplPop.git"],
+	["git://github.com/mhz/vim-matchit.git"],
+	["git://github.com/vim-scripts/closetag.vim.git"],
+	#  "git://github.com/timcharper/textile.vim.git",
+	#  "git://github.com/tpope/vim-cucumber.git",
+	#["git://github.com/tpope/vim-fugitive.git"],
+	#  "git://github.com/tpope/vim-git.git",
+	#["git://github.com/tpope/vim-haml.git"],
+	#  "git://github.com/tpope/vim-markdown.git",
+	#  "git://github.com/tpope/vim-rails.git",
+	#  "git://github.com/tpope/vim-repeat.git",
+	["git://github.com/tpope/vim-surround.git"],
+	#  "git://github.com/tpope/vim-vividchalk.git",
+	#["git://github.com/pix/vim-align.git"],
+	#  "git://github.com/tsaleh/vim-shoulda.git",
+	["git://github.com/tsaleh/vim-supertab.git"],
+	#  "git://github.com/tsaleh/vim-tcomment.git",
+	#  "git://github.com/vim-ruby/vim-ruby.git",
+	#["git://repo.or.cz/vcscommand.git"],
+	#"git://github.com/borgand/ir_black.git",
+	]
+
+	[	
+	#["pythoncomplete",        ""],
+	#["rails-1567",        ""],
+	#["showmarks",        ""],
+	#["IndexedSearch", "7062",  "plugin"],
+  	#["jquery",        "12107", "syntax"],
+  	["bufexplorer",   "12904", "zip"],
+  	#["minibufexpl",   "3640",   "plugin"],
+  	#["taglist",       "7701",  "zip"],
+  	#["vcscommand",    "12743", "zip"],
+  	#["l9", "13948", "zip"]
+	]
+
+require 'fileutils'
+require 'open-uri'
+
+bundles_dir = File.join(File.dirname(__FILE__), "bundle")
+
+FileUtils.cd(bundles_dir)
+
+trash = ARGV.include?('--trash')
+
+bundles.each do |script|
+	url = script[0]
+	puts url
+	if (url.start_with? 'git')
+  dir = url.split('/').last.sub(/\.git$/, '')
+		if File.exists?(dir)
+			if !trash
+				puts "  Skipping"
+			else
+				FileUtils.rm_rf dir
+			end
+    next
+  end
+  puts "  Unpacking #{url} into #{dir}"
+		`#{git_command} clone #{url} #{dir}`
+	end
+	if (url.start_with? 'hg')
+		url = script[0].gsub(/^hg:/,"https:")
+		dir = url.split('/').last
+		if File.exists?(dir)
+			if !trash
+				puts "  Skipping"
+			else
+				FileUtils.rm_rf dir
+			end
+			next
+		end
+		puts "  Unpacking #{url} into #{dir}"
+		`#{hg_command} clone #{url} #{dir}`
+	end
+	if (url.start_with? 'vim')
+		name = script[0].gsub(/^vim:\/\//,"")
+	script_id = script[1]
+  if !trash && File.exists?(name)
+			puts "  Skipping"
+    next
+  end
+  puts "Setup & Download #{name}"
+  FileUtils.mkdir_p(name)
+	FileUtils.cd(name)
+	f = open("http://www.vim.org/scripts/download_script.php?src_id=#{script_id}")
+	local_file = f.meta["content-disposition"].gsub(/attachment; filename=/,"")
+	if local_file.end_with? 'vim'
+		FileUtils.mkdir_p(File.dirname("plugin"))
+		FileUtils.cd("plugin")
+	end
+  puts "  Writing #{local_file}"
+  File.open(local_file, "w") do |file|
+    file << f.read
+  end
+	if local_file.end_with? 'zip'
+		puts "  Unzip"
+    %x(unzip #{local_file})
+  end
+	if local_file.end_with? 'vba.gz'
+		puts "  Vimball Gzip"
+    %x(gunzip #{local_file})
+		# launch vim and make it process the vimball the right way:
+		local_folder = name
+		unzipped_file = local_file.gsub(/.gz/,"")
+		system("cd ../.. ; #{vim_command} +\"e bundle/#{local_folder}/#{unzipped_file}|UseVimball ~/.vim/bundle/#{local_folder}\"")
+	elsif local_file.end_with? 'vba.tar.gz'
+		puts "  Vimball Tar Gzip"
+    %x(tar zxf #{local_file})
+		# launch vim and make it process the vimball the right way:
+		local_folder = name
+		unzipped_file = local_file.gsub(/.tar.gz/,"")
+		system("cd ../.. ; #{vim_command} +\"e bundle/#{local_folder}/#{unzipped_file}|UseVimball ~/.vim/bundle/#{local_folder}\"")
+	elsif local_file.end_with? 'tar.gz'
+		puts "  Tar Gunzip"
+    %x(tar zxf #{local_file})
+	elsif local_file.end_with? '.gz'
+		puts "  Gunzip"
+    %x(gunzip #{local_file})
+  end
+	if local_file.end_with? 'vim'
+		FileUtils.cd("..")
+	end
+	FileUtils.cd("..")
+	# do any custom code.
+	if script.size == 3
+		puts "  Custom setup"
+		script[2].call
+	end
+  else
+    if script.size == 2
+      puts "  Custom setup"
+      script[1].call
+    end
+	end
+
+end
+
+# vim:ft=ruby:
