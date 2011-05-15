@@ -1,0 +1,9 @@
+Installation instructions.
+
+1. Backup your .vimrc file and the .vim directory.
+2. Download the git repository.
+cd ~/
+git clone git@github.com:novicew/autovim.git
+3. Link the .vimrc file and the .vim folder.
+ln -s ~/autovim/.vimrc ~/.vimrc
+ln -s ~/autovim/.vim ~/.vim
