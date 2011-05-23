@@ -5,7 +5,7 @@ Installation instructions.
 
 2. Download the git repository.
 cd ~/
-git clone git@github.com:novicew/autovim.git
+git clone git://github.com/novicew/autovim.git
 
 3. Link the .vimrc file and the .vim folder.
 ln -s ~/autovim/.vimrc ~/.vimrc
